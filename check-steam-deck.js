@@ -97,7 +97,7 @@ function checkDeviceAvailability(cartButtonTexts, device) {
  * Steam Deck Restock Checker
  * Monitors the Steam Deck refurbished page for availability
  */
-async function checkSteamDeckStock(deviceCode = "oled-512") {
+async function checkSteamDeckStock(deviceCode = "oled-512", pushover) {
   let browser;
 
   // Get device configuration
@@ -109,9 +109,6 @@ async function checkSteamDeckStock(deviceCode = "oled-512") {
   }
 
   console.log(`🔍 Monitoring ${device.name}...`);
-
-  // Initialize Pushover
-  const pushover = initializePushover();
 
   try {
     console.log("Starting Steam Deck stock check...");
@@ -173,18 +170,22 @@ async function checkSteamDeckStock(deviceCode = "oled-512") {
   } catch (error) {
     console.error("❌ Error occurred:", error.message);
 
-    // Send error notification (but don't wait for it to complete)
-    sendNotification(
-      pushover,
-      `Steam Deck checker encountered an error: ${error.message}`,
-      "Steam Deck Checker Error",
-      0
-    ).catch((notificationError) => {
+    // Send error notification and wait for it to complete
+    try {
+      await sendNotification(
+        pushover,
+        `🚨 Steam Deck checker encountered an error:\n\n${error.message}\n\nDevice: ${device.name}\nTime: ${new Date().toISOString()}`,
+        "🔥 Steam Deck Checker Error",
+        1, // High priority for errors
+        "siren"
+      );
+      console.log("✅ Error notification sent successfully");
+    } catch (notificationError) {
       console.error(
-        "Failed to send error notification:",
+        "❌ Failed to send error notification:",
         notificationError.message
       );
-    });
+    }
 
     // Re-throw to ensure the workflow fails on error
     throw error;
@@ -227,13 +228,35 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(0);
   }
 
-  checkSteamDeckStock(argv.device)
+  const pushover = initializePushover();
+
+  checkSteamDeckStock(argv.device, pushover)
     .then(() => {
       console.log("✅ Stock check completed successfully");
       process.exit(0);
     })
-    .catch((error) => {
+    .catch(async (error) => {
       console.error("💥 Stock check failed:", error.message);
+
+      // Send a final error notification if the main function failed
+      if (pushover) {
+        try {
+          await sendNotification(
+            pushover,
+            `💥 Critical failure in Steam Deck checker:\n\n${error.message}\n\nStack trace:\n${error.stack}\n\nTime: ${new Date().toISOString()}`,
+            "🚨 CRITICAL: Steam Deck Checker Failed",
+            2, // Emergency priority
+            "siren"
+          );
+          console.log("✅ Critical error notification sent");
+        } catch (notificationError) {
+          console.error(
+            "❌ Failed to send critical error notification:",
+            notificationError.message
+          );
+        }
+      }
+
       process.exit(1);
     });
 }
