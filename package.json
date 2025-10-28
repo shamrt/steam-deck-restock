@@ -1,0 +1,28 @@
+{
+  "name": "steam-deck-restock-checker",
+  "version": "0.1.0",
+  "description": "Automated Steam Deck restock monitoring using GitHub Actions. Borrowed from https://github.com/krzysztofradomski/scraper",
+  "main": "check-steam-deck.js",
+  "scripts": {
+    "check": "node check-steam-deck.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "steam-deck",
+    "restock",
+    "puppeteer",
+    "automation",
+    "github-actions"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^24.26.1"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "volta": {
+    "node": "24.11.0"
+  }
+}
