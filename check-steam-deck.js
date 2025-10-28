@@ -37,11 +37,11 @@ const DEVICES = {
 /**
  * Initializes Pushover client if credentials are available
  */
-function initializePushover() {
-  if (process.env.PUSHOVER_USER && process.env.PUSHOVER_TOKEN) {
+function initializePushover(userKey, apiToken) {
+  if (userKey && apiToken) {
     const pushover = new Push({
-      user: process.env.PUSHOVER_USER,
-      token: process.env.PUSHOVER_TOKEN,
+      user: userKey,
+      token: apiToken,
     });
     console.log("✅ Pushover notifications enabled");
     return pushover;
@@ -206,6 +206,16 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       choices: Object.keys(DEVICES),
       default: "oled-512",
     })
+    .option("pushover-user", {
+      alias: "u",
+      type: "string",
+      description: "Pushover user key for notifications",
+    })
+    .option("pushover-token", {
+      alias: "t",
+      type: "string",
+      description: "Pushover API token for notifications",
+    })
     .option("list-devices", {
       alias: "l",
       type: "boolean",
@@ -216,6 +226,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     .example("$0", "Monitor Steam Deck OLED 512GB (default)")
     .example("$0 --device oled-1tb", "Monitor Steam Deck OLED 1TB")
     .example("$0 -d lcd-256", "Monitor Steam Deck LCD 256GB")
+    .example("$0 -u USER123 -t TOKEN456", "Use specific Pushover credentials")
+    .example(
+      "$0 --pushover-user USER123 --pushover-token TOKEN456",
+      "Use specific Pushover credentials (long form)"
+    )
     .example("$0 --list-devices", "List all available device codes")
     .parseSync();
 
@@ -228,7 +243,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(0);
   }
 
-  const pushover = initializePushover();
+  // Get Pushover credentials from command line arguments
+  const userKey = argv.pushoverUser;
+  const apiToken = argv.pushoverToken;
+  const pushover = initializePushover(userKey, apiToken);
 
   checkSteamDeckStock(argv.device, pushover)
     .then(() => {

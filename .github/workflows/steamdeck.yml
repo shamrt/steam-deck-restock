@@ -20,7 +20,4 @@ jobs:
         run: npm install
 
       - name: Run Steam Deck stock check
-        run: node check-steam-deck.js --device ${{ vars.DEVICE_CODE || 'oled-512' }}
-        env:
-          PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
-          PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+        run: node check-steam-deck.js --device ${{ vars.DEVICE_CODE || 'oled-512' }} --pushover-user "${{ secrets.PUSHOVER_USER }}" --pushover-token "${{ secrets.PUSHOVER_TOKEN }}"
