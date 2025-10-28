@@ -1,7 +1,12 @@
-const fs = require("fs");
-const path = require("path");
-const puppeteer = require("puppeteer");
-const Push = require("pushover-notifications");
+import fs from "fs";
+import path from "path";
+import puppeteer from "puppeteer";
+import Push from "pushover-notifications";
+import { fileURLToPath } from "url";
+import { promisify } from "util";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Steam Deck Restock Checker
@@ -29,31 +34,28 @@ async function checkSteamDeckStock() {
   }
 
   // Helper function to send Pushover notification
-  const sendNotification = (message, title = "Steam Deck Restock Alert", priority = 0) => {
-    return new Promise((resolve, reject) => {
-      if (!pushover) {
-        console.log(`📱 Would send notification: ${title} - ${message}`);
-        resolve();
-        return;
-      }
+  const sendNotification = async (message, title = "Steam Deck Restock Alert", priority = 0) => {
+    if (!pushover) {
+      console.log(`📱 Would send notification: ${title} - ${message}`);
+      return;
+    }
 
-      const msg = {
-        message: message,
-        title: title,
-        priority: priority,
-        sound: priority > 0 ? 'magic' : 'pushover'
-      };
+    const msg = {
+      message: message,
+      title: title,
+      priority: priority,
+      sound: priority > 0 ? 'magic' : 'pushover'
+    };
 
-      pushover.send(msg, (err, result) => {
-        if (err) {
-          console.error("❌ Failed to send Pushover notification:", err);
-          reject(err);
-        } else {
-          console.log("✅ Pushover notification sent successfully");
-          resolve(result);
-        }
-      });
-    });
+    try {
+      const pushoverSend = promisify(pushover.send.bind(pushover));
+      const result = await pushoverSend(msg);
+      console.log("✅ Pushover notification sent successfully");
+      return result;
+    } catch (error) {
+      console.error("❌ Failed to send Pushover notification:", error);
+      throw error;
+    }
   };
   
   try {
@@ -152,7 +154,7 @@ async function checkSteamDeckStock() {
 }
 
 // Run the check if this script is executed directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   checkSteamDeckStock()
     .then(() => {
       console.log("✅ Stock check completed successfully");
@@ -164,4 +166,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { checkSteamDeckStock };
+export { checkSteamDeckStock };

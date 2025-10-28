@@ -2,6 +2,7 @@
   "name": "steam-deck-restock-checker",
   "version": "0.1.0",
   "description": "Automated Steam Deck restock monitoring using GitHub Actions. Borrowed from https://github.com/krzysztofradomski/scraper",
+  "type": "module",
   "main": "check-steam-deck.js",
   "scripts": {
     "check": "node check-steam-deck.js",
