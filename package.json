@@ -15,6 +15,11 @@
   "main": "check-steam-deck.js",
   "scripts": {
     "check": "node check-steam-deck.js",
+    "check:lcd-256": "node check-steam-deck.js --device lcd-256",
+    "check:lcd-512": "node check-steam-deck.js --device lcd-512",
+    "check:oled-1tb": "node check-steam-deck.js --device oled-1tb",
+    "check:oled-512": "node check-steam-deck.js --device oled-512",
+    "devices": "node check-steam-deck.js --list-devices",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --cache --fix",
