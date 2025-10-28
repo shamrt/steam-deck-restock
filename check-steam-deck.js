@@ -37,16 +37,20 @@ const DEVICES = {
 /**
  * Initializes Pushover client if credentials are available
  */
-function initializePushover() {
-  if (process.env.PUSHOVER_USER && process.env.PUSHOVER_TOKEN) {
+function initializePushover(userKey, apiToken) {
+  if (userKey && apiToken) {
     const pushover = new Push({
-      user: process.env.PUSHOVER_USER,
-      token: process.env.PUSHOVER_TOKEN,
+      user: userKey,
+      token: apiToken,
     });
+
     console.log("✅ Pushover notifications enabled");
     return pushover;
   } else {
     console.log("⚠️ Pushover credentials not found - notifications disabled");
+    console.log(
+      "   Provide via --pushover-user/--pushover-token or PUSHOVER_USER/PUSHOVER_TOKEN env vars"
+    );
     return null;
   }
 }
@@ -97,7 +101,11 @@ function checkDeviceAvailability(cartButtonTexts, device) {
  * Steam Deck Restock Checker
  * Monitors the Steam Deck refurbished page for availability
  */
-async function checkSteamDeckStock(deviceCode = "oled-512", pushover) {
+async function checkSteamDeckStock(
+  deviceCode = "oled-512",
+  pushover,
+  notifySuccess = false
+) {
   let browser;
 
   // Get device configuration
@@ -166,6 +174,17 @@ async function checkSteamDeckStock(deviceCode = "oled-512", pushover) {
       );
     } else {
       console.log(`❌ No ${device.name} in stock.`);
+
+      // Send success notification if requested
+      if (notifySuccess) {
+        await sendNotification(
+          pushover,
+          `✅ Stock check completed successfully for ${device.name}.\n\nNo stock available at this time.\n\nChecked at: ${new Date().toISOString()}`,
+          `✅ Steam Deck Check Complete`,
+          0, // Normal priority
+          "pushover"
+        );
+      }
     }
   } catch (error) {
     console.error("❌ Error occurred:", error.message);
@@ -206,6 +225,25 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       choices: Object.keys(DEVICES),
       default: "oled-512",
     })
+    .option("pushover-user", {
+      alias: "u",
+      type: "string",
+      description:
+        "Pushover user key for notifications (fallback to PUSHOVER_USER env var)",
+    })
+    .option("pushover-token", {
+      alias: "t",
+      type: "string",
+      description:
+        "Pushover API token for notifications (fallback to PUSHOVER_TOKEN env var)",
+    })
+    .option("notify-success", {
+      alias: "n",
+      type: "boolean",
+      description:
+        "Send notification when check completes successfully (even if no stock found)",
+      default: false,
+    })
     .option("list-devices", {
       alias: "l",
       type: "boolean",
@@ -213,9 +251,17 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     })
     .help()
     .alias("help", "h")
-    .example("$0", "Monitor Steam Deck OLED 512GB (default)")
+    .example("$0", "Monitor Steam Deck OLED 512GB (uses env vars for Pushover)")
     .example("$0 --device oled-1tb", "Monitor Steam Deck OLED 1TB")
     .example("$0 -d lcd-256", "Monitor Steam Deck LCD 256GB")
+    .example(
+      "$0 -u USER123 -t TOKEN456",
+      "Override Pushover credentials via CLI"
+    )
+    .example(
+      "$0 --notify-success",
+      "Send notification on successful check (no stock)"
+    )
     .example("$0 --list-devices", "List all available device codes")
     .parseSync();
 
@@ -228,9 +274,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(0);
   }
 
-  const pushover = initializePushover();
+  // Get Pushover credentials from command line arguments or fallback to env vars
+  const userKey = argv.pushoverUser || process.env.PUSHOVER_USER;
+  const apiToken = argv.pushoverToken || process.env.PUSHOVER_TOKEN;
+  const pushover = initializePushover(userKey, apiToken);
 
-  checkSteamDeckStock(argv.device, pushover)
+  checkSteamDeckStock(argv.device, pushover, argv.notifySuccess)
     .then(() => {
       console.log("✅ Stock check completed successfully");
       process.exit(0);
