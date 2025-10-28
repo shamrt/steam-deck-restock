@@ -1,3 +1,6 @@
+# Generated files
+logs/
+
 # Dependencies
 node_modules/
 npm-debug.log*
@@ -49,7 +52,3 @@ jspm_packages/
 .DS_Store
 Thumbs.db
 
-# Keep the log files (these are tracked for the monitoring functionality)
-!in_stock.txt
-!error.txt
-!check_log.txt
