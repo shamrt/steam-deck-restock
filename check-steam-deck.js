@@ -9,54 +9,104 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
+ * Ensures the logs directory exists
+ */
+function ensureLogsDirectory() {
+  const logsDir = path.join(__dirname, "logs");
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+  }
+  return logsDir;
+}
+
+/**
+ * Initializes Pushover client if credentials are available
+ */
+function initializePushover() {
+  if (process.env.PUSHOVER_USER && process.env.PUSHOVER_TOKEN) {
+    const pushover = new Push({
+      user: process.env.PUSHOVER_USER,
+      token: process.env.PUSHOVER_TOKEN,
+    });
+    console.log("✅ Pushover notifications enabled");
+    return pushover;
+  } else {
+    console.log("⚠️ Pushover credentials not found - notifications disabled");
+    return null;
+  }
+}
+
+/**
+ * Sends a Pushover notification
+ */
+async function sendNotification(pushover, message, title = "Steam Deck Restock Alert", priority = 0) {
+  if (!pushover) {
+    console.log(`📱 Would send notification: ${title} - ${message}`);
+    return;
+  }
+
+  const msg = {
+    message: message,
+    title: title,
+    priority: priority,
+    sound: priority > 0 ? 'magic' : 'pushover'
+  };
+
+  try {
+    const pushoverSend = promisify(pushover.send.bind(pushover));
+    const result = await pushoverSend(msg);
+    console.log("✅ Pushover notification sent successfully");
+    return result;
+  } catch (error) {
+    console.error("❌ Failed to send Pushover notification:", error);
+    throw error;
+  }
+}
+
+/**
+ * Checks if Steam Deck OLED 512GB is available
+ */
+function checkOledAvailability(results) {
+  return results.some(
+    (text) => text.includes("Steam Deck 512 GB OLED") && text.includes("Add to cart")
+  );
+}
+
+/**
+ * Logs stock check results
+ */
+function logResults(logsDir, isAvailable, timestamp) {
+  if (isAvailable) {
+    fs.appendFileSync(
+      path.join(logsDir, "in_stock.txt"),
+      `OLED 512GB in stock at ${timestamp}\n`
+    );
+  } else {
+    fs.appendFileSync(
+      path.join(logsDir, "check_log.txt"),
+      `Checked at ${timestamp} - No stock\n`
+    );
+  }
+}
+
+/**
+ * Logs errors
+ */
+function logError(logsDir, error, timestamp) {
+  const errorMessage = `Error at: ${timestamp} - ${error.message}\n`;
+  fs.appendFileSync(path.join(logsDir, "error.txt"), errorMessage);
+}
+
+/**
  * Steam Deck Restock Checker
  * Monitors the Steam Deck refurbished page for availability
  */
 async function checkSteamDeckStock() {
   let browser;
   
-  // Ensure logs directory exists
-  const logsDir = path.join(__dirname, "logs");
-  if (!fs.existsSync(logsDir)) {
-    fs.mkdirSync(logsDir, { recursive: true });
-  }
-
-  // Initialize Pushover if credentials are available
-  let pushover = null;
-  if (process.env.PUSHOVER_USER && process.env.PUSHOVER_TOKEN) {
-    pushover = new Push({
-      user: process.env.PUSHOVER_USER,
-      token: process.env.PUSHOVER_TOKEN,
-    });
-    console.log("✅ Pushover notifications enabled");
-  } else {
-    console.log("⚠️ Pushover credentials not found - notifications disabled");
-  }
-
-  // Helper function to send Pushover notification
-  const sendNotification = async (message, title = "Steam Deck Restock Alert", priority = 0) => {
-    if (!pushover) {
-      console.log(`📱 Would send notification: ${title} - ${message}`);
-      return;
-    }
-
-    const msg = {
-      message: message,
-      title: title,
-      priority: priority,
-      sound: priority > 0 ? 'magic' : 'pushover'
-    };
-
-    try {
-      const pushoverSend = promisify(pushover.send.bind(pushover));
-      const result = await pushoverSend(msg);
-      console.log("✅ Pushover notification sent successfully");
-      return result;
-    } catch (error) {
-      console.error("❌ Failed to send Pushover notification:", error);
-      throw error;
-    }
-  };
+  // Initialize dependencies
+  const logsDir = ensureLogsDirectory();
+  const pushover = initializePushover();
   
   try {
     console.log("Starting Steam Deck stock check...");
@@ -93,9 +143,7 @@ async function checkSteamDeckStock() {
     console.log("Found cart buttons:", result.length);
     
     // Check for OLED 512GB availability
-    const isOled512gbAvailable = result.some(
-      (text) => text.includes("Steam Deck 512 GB OLED") && text.includes("Add to cart")
-    );
+    const isOled512gbAvailable = checkOledAvailability(result);
 
     // Log results
     console.log({ result });
@@ -103,40 +151,32 @@ async function checkSteamDeckStock() {
 
     const timestamp = new Date().toISOString();
     
+    // Log the results
+    logResults(logsDir, isOled512gbAvailable, timestamp);
+    
     if (isOled512gbAvailable) {
       console.log("🎉 OLED 512GB is in stock!");
-      
-      // Log to file
-      fs.appendFileSync(
-        path.join(logsDir, "in_stock.txt"),
-        `OLED 512GB in stock at ${timestamp}\n`
-      );
 
       // Send high-priority Pushover notification
       await sendNotification(
+        pushover,
         `🎉 Steam Deck OLED 512GB is now available for purchase!\n\nCheck: https://store.steampowered.com/sale/steamdeckrefurbished/`,
         "🚨 STEAM DECK IN STOCK! 🚨",
         1 // High priority
       );
     } else {
       console.log("❌ No OLED 512GB in stock.");
-      
-      // Log when we checked (for debugging)
-      fs.appendFileSync(
-        path.join(logsDir, "check_log.txt"),
-        `Checked at ${timestamp} - No stock\n`
-      );
     }
 
   } catch (error) {
     const timestamp = new Date().toISOString();
-    const errorMessage = `Error at: ${timestamp} - ${error.message}\n`;
     
     console.error("❌ Error occurred:", error.message);
-    fs.appendFileSync(path.join(logsDir, "error.txt"), errorMessage);
+    logError(logsDir, error, timestamp);
     
     // Send error notification (but don't wait for it to complete)
     sendNotification(
+      pushover,
       `Steam Deck checker encountered an error: ${error.message}`,
       "Steam Deck Checker Error",
       0
