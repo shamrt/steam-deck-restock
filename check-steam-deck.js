@@ -2,8 +2,6 @@ import puppeteer from "puppeteer";
 import Push from "pushover-notifications";
 import { promisify } from "util";
 
-
-
 /**
  * Initializes Pushover client if credentials are available
  */
@@ -24,7 +22,12 @@ function initializePushover() {
 /**
  * Sends a Pushover notification
  */
-async function sendNotification(pushover, message, title = "Steam Deck Restock Alert", priority = 0) {
+async function sendNotification(
+  pushover,
+  message,
+  title = "Steam Deck Restock Alert",
+  priority = 0
+) {
   if (!pushover) {
     console.log(`📱 Would send notification: ${title} - ${message}`);
     return;
@@ -34,7 +37,7 @@ async function sendNotification(pushover, message, title = "Steam Deck Restock A
     message: message,
     title: title,
     priority: priority,
-    sound: priority > 0 ? 'magic' : 'pushover'
+    sound: priority > 0 ? "magic" : "pushover",
   };
 
   try {
@@ -53,11 +56,11 @@ async function sendNotification(pushover, message, title = "Steam Deck Restock A
  */
 function checkOledAvailability(cartButtonTexts) {
   return cartButtonTexts.some(
-    (buttonText) => buttonText.includes("Steam Deck 512 GB OLED") && buttonText.includes("Add to cart")
+    (buttonText) =>
+      buttonText.includes("Steam Deck 512 GB OLED") &&
+      buttonText.includes("Add to cart")
   );
 }
-
-
 
 /**
  * Steam Deck Restock Checker
@@ -65,22 +68,24 @@ function checkOledAvailability(cartButtonTexts) {
  */
 async function checkSteamDeckStock() {
   let browser;
-  
+
   // Initialize Pushover
   const pushover = initializePushover();
-  
+
   try {
     console.log("Starting Steam Deck stock check...");
-    
+
     browser = await puppeteer.launch({
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
-    
+
     const page = await browser.newPage();
-    
+
     // Set a user agent to avoid blocking
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-    
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    );
+
     console.log("Navigating to Steam Deck refurbished page...");
     await page.goto(
       "https://store.steampowered.com/sale/steamdeckrefurbished/",
@@ -102,7 +107,7 @@ async function checkSteamDeckStock() {
     }
 
     console.log("Found cart buttons:", cartButtonTexts.length);
-    
+
     // Check for OLED 512GB availability
     const isOled512gbAvailable = checkOledAvailability(cartButtonTexts);
 
@@ -110,8 +115,6 @@ async function checkSteamDeckStock() {
     console.log({ cartButtonTexts });
     console.log(`OLED 512GB Available: ${isOled512gbAvailable}`);
 
-    const timestamp = new Date().toISOString();
-    
     if (isOled512gbAvailable) {
       console.log("🎉 OLED 512GB is in stock!");
 
@@ -125,20 +128,22 @@ async function checkSteamDeckStock() {
     } else {
       console.log("❌ No OLED 512GB in stock.");
     }
-
   } catch (error) {
     console.error("❌ Error occurred:", error.message);
-    
+
     // Send error notification (but don't wait for it to complete)
     sendNotification(
       pushover,
       `Steam Deck checker encountered an error: ${error.message}`,
       "Steam Deck Checker Error",
       0
-    ).catch(notificationError => {
-      console.error("Failed to send error notification:", notificationError.message);
+    ).catch((notificationError) => {
+      console.error(
+        "Failed to send error notification:",
+        notificationError.message
+      );
     });
-    
+
     // Re-throw to ensure the workflow fails on error
     throw error;
   } finally {
