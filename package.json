@@ -2,18 +2,6 @@
   "name": "steam-deck-restock-checker",
   "version": "0.1.0",
   "description": "Automated Steam Deck restock monitoring using GitHub Actions. Borrowed from https://github.com/krzysztofradomski/scraper",
-  "type": "module",
-  "main": "check-steam-deck.js",
-  "scripts": {
-    "check": "node check-steam-deck.js",
-    "pretest": "npm run lint",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint . --cache --fix",
-    "lint:check": "eslint . --cache",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "prepare": "husky"
-  },
   "keywords": [
     "steam-deck",
     "restock",
@@ -21,32 +9,49 @@
     "automation",
     "github-actions"
   ],
-  "author": "",
   "license": "MIT",
-  "dependencies": {
-    "puppeteer": "^24.26.1",
-    "pushover-notifications": "^1.2.3"
-  },
-  "engines": {
-    "node": ">=24.0.0"
-  },
-  "volta": {
-    "node": "24.11.0"
-  },
-  "devDependencies": {
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.4",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.2.6",
-    "prettier": "^3.6.2"
+  "author": "",
+  "type": "module",
+  "main": "check-steam-deck.js",
+  "scripts": {
+    "check": "node check-steam-deck.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --cache --fix",
+    "lint:check": "eslint . --cache",
+    "prepare": "husky",
+    "pretest": "npm run lint",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "lint-staged": {
     "*.js": [
       "eslint --cache --fix",
       "prettier --write"
     ],
+    "package.json": [
+      "sort-package-json",
+      "prettier --write"
+    ],
     "*.{json,md,yml,yaml}": [
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "puppeteer": "^24.26.1",
+    "pushover-notifications": "^1.2.3"
+  },
+  "devDependencies": {
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.6",
+    "prettier": "^3.6.2",
+    "sort-package-json": "^3.4.0"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "volta": {
+    "node": "24.11.0"
   }
 }
