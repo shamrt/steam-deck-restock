@@ -30,7 +30,7 @@ async function sendNotification(pushover, message, title = "Steam Deck Restock A
     return;
   }
 
-  const msg = {
+  const notificationMessage = {
     message: message,
     title: title,
     priority: priority,
@@ -39,7 +39,7 @@ async function sendNotification(pushover, message, title = "Steam Deck Restock A
 
   try {
     const pushoverSend = promisify(pushover.send.bind(pushover));
-    const result = await pushoverSend(msg);
+    const result = await pushoverSend(notificationMessage);
     console.log("✅ Pushover notification sent successfully");
     return result;
   } catch (error) {
@@ -51,9 +51,9 @@ async function sendNotification(pushover, message, title = "Steam Deck Restock A
 /**
  * Checks if Steam Deck OLED 512GB is available
  */
-function checkOledAvailability(results) {
-  return results.some(
-    (text) => text.includes("Steam Deck 512 GB OLED") && text.includes("Add to cart")
+function checkOledAvailability(cartButtonTexts) {
+  return cartButtonTexts.some(
+    (buttonText) => buttonText.includes("Steam Deck 512 GB OLED") && buttonText.includes("Add to cart")
   );
 }
 
@@ -89,25 +89,25 @@ async function checkSteamDeckStock() {
 
     console.log("Checking cart buttons...");
     await page.focus("div.CartBtn");
-    const btns = await page.$$("div.CartBtn");
+    const cartButtons = await page.$$("div.CartBtn");
 
-    let result = [];
-    for (let btn of btns) {
-      const text = await btn.evaluate(
+    let cartButtonTexts = [];
+    for (let cartButton of cartButtons) {
+      const text = await cartButton.evaluate(
         (element) =>
           element.parentElement.parentElement.parentElement.parentElement
             .textContent
       );
-      result.push(text);
+      cartButtonTexts.push(text);
     }
 
-    console.log("Found cart buttons:", result.length);
+    console.log("Found cart buttons:", cartButtonTexts.length);
     
     // Check for OLED 512GB availability
-    const isOled512gbAvailable = checkOledAvailability(result);
+    const isOled512gbAvailable = checkOledAvailability(cartButtonTexts);
 
     // Log results
-    console.log({ result });
+    console.log({ cartButtonTexts });
     console.log(`OLED 512GB Available: ${isOled512gbAvailable}`);
 
     const timestamp = new Date().toISOString();
@@ -135,8 +135,8 @@ async function checkSteamDeckStock() {
       `Steam Deck checker encountered an error: ${error.message}`,
       "Steam Deck Checker Error",
       0
-    ).catch(notifError => {
-      console.error("Failed to send error notification:", notifError.message);
+    ).catch(notificationError => {
+      console.error("Failed to send error notification:", notificationError.message);
     });
     
     // Re-throw to ensure the workflow fails on error
