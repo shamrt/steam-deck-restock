@@ -1,6 +1,38 @@
 import puppeteer from "puppeteer";
 import Push from "pushover-notifications";
 import { promisify } from "util";
+import yargs from "yargs";
+import { hideBin } from "yargs/helpers";
+
+/**
+ * Device configurations for Steam Deck models
+ */
+const DEVICES = {
+  "oled-512": {
+    name: "Steam Deck OLED 512GB",
+    searchTerms: ["Steam Deck 512 GB OLED", "Add to cart"],
+    priority: 1,
+    sound: "magic",
+  },
+  "oled-1tb": {
+    name: "Steam Deck OLED 1TB",
+    searchTerms: ["Steam Deck 1 TB OLED", "Add to cart"],
+    priority: 1,
+    sound: "magic",
+  },
+  "lcd-256": {
+    name: "Steam Deck LCD 256GB",
+    searchTerms: ["Steam Deck 256 GB", "Add to cart"],
+    priority: 0,
+    sound: "pushover",
+  },
+  "lcd-512": {
+    name: "Steam Deck LCD 512GB",
+    searchTerms: ["Steam Deck 512 GB", "Add to cart"],
+    priority: 0,
+    sound: "pushover",
+  },
+};
 
 /**
  * Initializes Pushover client if credentials are available
@@ -26,7 +58,8 @@ async function sendNotification(
   pushover,
   message,
   title = "Steam Deck Restock Alert",
-  priority = 0
+  priority = 0,
+  sound = "pushover"
 ) {
   if (!pushover) {
     console.log(`📱 Would send notification: ${title} - ${message}`);
@@ -37,7 +70,7 @@ async function sendNotification(
     message: message,
     title: title,
     priority: priority,
-    sound: priority > 0 ? "magic" : "pushover",
+    sound: sound,
   };
 
   try {
@@ -52,13 +85,11 @@ async function sendNotification(
 }
 
 /**
- * Checks if Steam Deck OLED 512GB is available
+ * Checks if a specific Steam Deck device is available
  */
-function checkOledAvailability(cartButtonTexts) {
-  return cartButtonTexts.some(
-    (buttonText) =>
-      buttonText.includes("Steam Deck 512 GB OLED") &&
-      buttonText.includes("Add to cart")
+function checkDeviceAvailability(cartButtonTexts, device) {
+  return cartButtonTexts.some((buttonText) =>
+    device.searchTerms.every((term) => buttonText.includes(term))
   );
 }
 
@@ -66,8 +97,18 @@ function checkOledAvailability(cartButtonTexts) {
  * Steam Deck Restock Checker
  * Monitors the Steam Deck refurbished page for availability
  */
-async function checkSteamDeckStock() {
+async function checkSteamDeckStock(deviceCode = "oled-512") {
   let browser;
+
+  // Get device configuration
+  const device = DEVICES[deviceCode];
+  if (!device) {
+    throw new Error(
+      `Unknown device code: ${deviceCode}. Available: ${Object.keys(DEVICES).join(", ")}`
+    );
+  }
+
+  console.log(`🔍 Monitoring ${device.name}...`);
 
   // Initialize Pushover
   const pushover = initializePushover();
@@ -108,25 +149,26 @@ async function checkSteamDeckStock() {
 
     console.log("Found cart buttons:", cartButtonTexts.length);
 
-    // Check for OLED 512GB availability
-    const isOled512gbAvailable = checkOledAvailability(cartButtonTexts);
+    // Check for device availability
+    const isDeviceAvailable = checkDeviceAvailability(cartButtonTexts, device);
 
     // Log results
     console.log({ cartButtonTexts });
-    console.log(`OLED 512GB Available: ${isOled512gbAvailable}`);
+    console.log(`${device.name} Available: ${isDeviceAvailable}`);
 
-    if (isOled512gbAvailable) {
-      console.log("🎉 OLED 512GB is in stock!");
+    if (isDeviceAvailable) {
+      console.log(`🎉 ${device.name} is in stock!`);
 
-      // Send high-priority Pushover notification
+      // Send Pushover notification with device-specific priority and sound
       await sendNotification(
         pushover,
-        `🎉 Steam Deck OLED 512GB is now available for purchase!\n\nCheck: https://store.steampowered.com/sale/steamdeckrefurbished/`,
-        "🚨 STEAM DECK IN STOCK! 🚨",
-        1 // High priority
+        `🎉 ${device.name} is now available for purchase!\n\nCheck: https://store.steampowered.com/sale/steamdeckrefurbished/`,
+        `🚨 ${device.name.toUpperCase()} IN STOCK! 🚨`,
+        device.priority,
+        device.sound
       );
     } else {
-      console.log("❌ No OLED 512GB in stock.");
+      console.log(`❌ No ${device.name} in stock.`);
     }
   } catch (error) {
     console.error("❌ Error occurred:", error.message);
@@ -155,7 +197,37 @@ async function checkSteamDeckStock() {
 
 // Run the check if this script is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  checkSteamDeckStock()
+  const argv = yargs(hideBin(process.argv))
+    .option("device", {
+      alias: "d",
+      type: "string",
+      description: "Device to monitor",
+      choices: Object.keys(DEVICES),
+      default: "oled-512",
+    })
+    .option("list-devices", {
+      alias: "l",
+      type: "boolean",
+      description: "List available device codes",
+    })
+    .help()
+    .alias("help", "h")
+    .example("$0", "Monitor Steam Deck OLED 512GB (default)")
+    .example("$0 --device oled-1tb", "Monitor Steam Deck OLED 1TB")
+    .example("$0 -d lcd-256", "Monitor Steam Deck LCD 256GB")
+    .example("$0 --list-devices", "List all available device codes")
+    .parseSync();
+
+  // Handle list devices option
+  if (argv.listDevices) {
+    console.log("📱 Available Steam Deck devices:");
+    Object.entries(DEVICES).forEach(([code, device]) => {
+      console.log(`  ${code.padEnd(10)} - ${device.name}`);
+    });
+    process.exit(0);
+  }
+
+  checkSteamDeckStock(argv.device)
     .then(() => {
       console.log("✅ Stock check completed successfully");
       process.exit(0);
