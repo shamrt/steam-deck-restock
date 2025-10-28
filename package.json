@@ -6,7 +6,12 @@
   "main": "check-steam-deck.js",
   "scripts": {
     "check": "node check-steam-deck.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "pretest": "npm run lint",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint . --cache --fix",
+    "lint:check": "eslint . --cache",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "keywords": [
     "steam-deck",
@@ -26,5 +31,10 @@
   },
   "volta": {
     "node": "24.11.0"
+  },
+  "devDependencies": {
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2"
   }
 }
