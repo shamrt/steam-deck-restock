@@ -21,3 +21,6 @@ jobs:
 
     - name: Run Steam Deck stock check
       run: npm run check
+      env:
+        PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
+        PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
