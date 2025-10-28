@@ -1,23 +1,8 @@
-import fs from "fs";
-import path from "path";
 import puppeteer from "puppeteer";
 import Push from "pushover-notifications";
-import { fileURLToPath } from "url";
 import { promisify } from "util";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
-/**
- * Ensures the logs directory exists
- */
-function ensureLogsDirectory() {
-  const logsDir = path.join(__dirname, "logs");
-  if (!fs.existsSync(logsDir)) {
-    fs.mkdirSync(logsDir, { recursive: true });
-  }
-  return logsDir;
-}
 
 /**
  * Initializes Pushover client if credentials are available
@@ -72,30 +57,7 @@ function checkOledAvailability(results) {
   );
 }
 
-/**
- * Logs stock check results
- */
-function logResults(logsDir, isAvailable, timestamp) {
-  if (isAvailable) {
-    fs.appendFileSync(
-      path.join(logsDir, "in_stock.txt"),
-      `OLED 512GB in stock at ${timestamp}\n`
-    );
-  } else {
-    fs.appendFileSync(
-      path.join(logsDir, "check_log.txt"),
-      `Checked at ${timestamp} - No stock\n`
-    );
-  }
-}
 
-/**
- * Logs errors
- */
-function logError(logsDir, error, timestamp) {
-  const errorMessage = `Error at: ${timestamp} - ${error.message}\n`;
-  fs.appendFileSync(path.join(logsDir, "error.txt"), errorMessage);
-}
 
 /**
  * Steam Deck Restock Checker
@@ -104,8 +66,7 @@ function logError(logsDir, error, timestamp) {
 async function checkSteamDeckStock() {
   let browser;
   
-  // Initialize dependencies
-  const logsDir = ensureLogsDirectory();
+  // Initialize Pushover
   const pushover = initializePushover();
   
   try {
@@ -151,9 +112,6 @@ async function checkSteamDeckStock() {
 
     const timestamp = new Date().toISOString();
     
-    // Log the results
-    logResults(logsDir, isOled512gbAvailable, timestamp);
-    
     if (isOled512gbAvailable) {
       console.log("🎉 OLED 512GB is in stock!");
 
@@ -169,10 +127,7 @@ async function checkSteamDeckStock() {
     }
 
   } catch (error) {
-    const timestamp = new Date().toISOString();
-    
     console.error("❌ Error occurred:", error.message);
-    logError(logsDir, error, timestamp);
     
     // Send error notification (but don't wait for it to complete)
     sendNotification(
