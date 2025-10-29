@@ -4,6 +4,9 @@ import { promisify } from "util";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 
+const STEAM_DECK_REFURB_URL =
+  "https://store.steampowered.com/sale/steamdeckrefurbished/";
+
 /**
  * Device configurations for Steam Deck models
  */
@@ -147,10 +150,7 @@ async function checkSteamDeckStock(
     );
 
     console.log("Navigating to Steam Deck refurbished page...");
-    await page.goto(
-      "https://store.steampowered.com/sale/steamdeckrefurbished/",
-      { waitUntil: "networkidle0" }
-    );
+    await page.goto(STEAM_DECK_REFURB_URL, { waitUntil: "networkidle0" });
 
     console.log("Checking cart buttons...");
     await page.focus("div.CartBtn");
@@ -187,7 +187,7 @@ async function checkSteamDeckStock(
       // Send Pushover notification with device-specific priority and sound
       await sendNotification(
         pushover,
-        `🎉 ${device.name} is now available for purchase!\n\nCheck: https://store.steampowered.com/sale/steamdeckrefurbished/`,
+        `🎉 ${device.name} is now available for purchase!\n\nCheck: ${STEAM_DECK_REFURB_URL}`,
         `🚨 ${device.name.toUpperCase()} IN STOCK! 🚨`,
         device.priority,
         device.sound
@@ -207,7 +207,7 @@ async function checkSteamDeckStock(
         // Send notification about other available devices
         await sendNotification(
           pushover,
-          `ℹ️ Your monitored device (${device.name}) is not available, but other models are in stock:\n\n${otherDeviceNames.map((name) => `• ${name}`).join("\n")}\n\nCheck: https://store.steampowered.com/sale/steamdeckrefurbished/`,
+          `ℹ️ Your monitored device (${device.name}) is not available, but other models are in stock:\n\n${otherDeviceNames.map((name) => `• ${name}`).join("\n")}\n\nCheck: ${STEAM_DECK_REFURB_URL}`,
           `📦 Other Steam Decks Available`,
           0, // Normal priority - less urgent than target device
           "pushover"
