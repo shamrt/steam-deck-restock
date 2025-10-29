@@ -10,25 +10,21 @@ import { hideBin } from "yargs/helpers";
 const DEVICES = {
   "oled-512": {
     name: "Steam Deck OLED 512GB",
-    searchTerms: ["Steam Deck 512 GB OLED", "Add to cart"],
     priority: 1,
     sound: "magic",
   },
   "oled-1tb": {
     name: "Steam Deck OLED 1TB",
-    searchTerms: ["Steam Deck 1 TB OLED", "Add to cart"],
     priority: 1,
     sound: "magic",
   },
   "lcd-256": {
     name: "Steam Deck LCD 256GB",
-    searchTerms: ["Steam Deck 256 GB", "Add to cart"],
     priority: 0,
     sound: "pushover",
   },
   "lcd-512": {
     name: "Steam Deck LCD 512GB",
-    searchTerms: ["Steam Deck 512 GB", "Add to cart"],
     priority: 0,
     sound: "pushover",
   },
@@ -90,10 +86,12 @@ async function sendNotification(
 
 /**
  * Checks if a specific Steam Deck device is available
+ * Device is considered available if it matches the device name and does NOT contain "Out of stock"
  */
 function checkDeviceAvailability(cartButtonTexts, device) {
-  return cartButtonTexts.some((buttonText) =>
-    device.searchTerms.every((term) => buttonText.includes(term))
+  return cartButtonTexts.some(
+    (buttonText) =>
+      buttonText.includes(device.name) && !buttonText.includes("Out of stock")
   );
 }
 
