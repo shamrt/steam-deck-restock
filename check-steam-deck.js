@@ -96,6 +96,22 @@ function checkDeviceAvailability(cartButtonTexts, device) {
 }
 
 /**
+ * Checks availability for all Steam Deck devices
+ * Returns an array of available device codes
+ */
+function checkAllDevicesAvailability(cartButtonTexts) {
+  const availableDevices = [];
+
+  Object.entries(DEVICES).forEach(([deviceCode, device]) => {
+    if (checkDeviceAvailability(cartButtonTexts, device)) {
+      availableDevices.push(deviceCode);
+    }
+  });
+
+  return availableDevices;
+}
+
+/**
  * Steam Deck Restock Checker
  * Monitors the Steam Deck refurbished page for availability
  */
@@ -152,12 +168,18 @@ async function checkSteamDeckStock(
 
     console.log("Found cart buttons:", cartButtonTexts.length);
 
-    // Check for device availability
+    // Check for target device availability
     const isDeviceAvailable = checkDeviceAvailability(cartButtonTexts, device);
+
+    // Check availability for all devices
+    const availableDevices = checkAllDevicesAvailability(cartButtonTexts);
 
     // Log results
     console.log({ cartButtonTexts });
     console.log(`${device.name} Available: ${isDeviceAvailable}`);
+    console.log(
+      `All available devices: ${availableDevices.join(", ") || "none"}`
+    );
 
     if (isDeviceAvailable) {
       console.log(`🎉 ${device.name} is in stock!`);
@@ -173,15 +195,34 @@ async function checkSteamDeckStock(
     } else {
       console.log(`❌ No ${device.name} in stock.`);
 
-      // Send success notification if requested
-      if (notifySuccess) {
+      // Check if other devices are available
+      if (availableDevices.length > 0) {
+        const otherDeviceNames = availableDevices.map(
+          (code) => DEVICES[code].name
+        );
+        console.log(
+          `ℹ️ Other Steam Deck models available: ${otherDeviceNames.join(", ")}`
+        );
+
+        // Send notification about other available devices
         await sendNotification(
           pushover,
-          `✅ Stock check completed successfully for ${device.name}.\n\nNo stock available at this time.\n\nChecked at: ${new Date().toISOString()}`,
-          `✅ Steam Deck Check Complete`,
-          0, // Normal priority
+          `ℹ️ Your monitored device (${device.name}) is not available, but other models are in stock:\n\n${otherDeviceNames.map((name) => `• ${name}`).join("\n")}\n\nCheck: https://store.steampowered.com/sale/steamdeckrefurbished/`,
+          `📦 Other Steam Decks Available`,
+          0, // Normal priority - less urgent than target device
           "pushover"
         );
+      } else {
+        // Send success notification if requested and no devices available
+        if (notifySuccess) {
+          await sendNotification(
+            pushover,
+            `✅ Stock check completed successfully for ${device.name}.\n\nNo Steam Deck models available at this time.\n\nChecked at: ${new Date().toISOString()}`,
+            `✅ Steam Deck Check Complete`,
+            0, // Normal priority
+            "pushover"
+          );
+        }
       }
     }
   } catch (error) {
