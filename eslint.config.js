@@ -1,6 +1,5 @@
 import js from "@eslint/js";
 import prettier from "eslint-config-prettier";
-import prettierPlugin from "eslint-plugin-prettier";
 
 export default [
   // Apply to all JS files
@@ -17,13 +16,9 @@ export default [
         __filename: "readonly",
       },
     },
-    plugins: {
-      prettier: prettierPlugin,
-    },
     rules: {
       ...js.configs.recommended.rules,
       ...prettier.rules,
-      "prettier/prettier": "error",
       "no-unused-vars": "error",
       "no-console": "off",
     },
