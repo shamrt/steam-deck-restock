@@ -19,8 +19,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Build TypeScript
+        run: npm run build
+
       - name: Run Steam Deck stock check
-        run: node check-steam-deck.js --device ${{ vars.DEVICE_CODE || 'oled-512' }}
+        run: node dist/check-steam-deck.js --device ${{ vars.DEVICE_CODE || 'oled-512' }}
         env:
           PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
           PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
